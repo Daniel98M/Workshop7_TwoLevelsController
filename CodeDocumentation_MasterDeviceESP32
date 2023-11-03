@@ -1,0 +1,59 @@
+#include <WiFi.h>      // Biblioteca para la conexión WiFi
+#include <ThingSpeak.h> // Biblioteca para la comunicación con ThingSpeak
+#include <Wire.h>      // Biblioteca para la comunicación I2C
+
+float temperatura;      // Variable para almacenar la temperatura
+const int pinGPIO = 13; // Pin digital para controlar un LED según la temperatura
+
+const char* ssid = "KKhSCkjbas";  // Nombre de la red WiFi
+const char* password = "skdgjusgdkj"; // Contraseña de la red WiFi
+
+unsigned long channelID = 2329732;  // ID del canal ThingSpeak
+const char* WriteAPIKey = "B81UVY4XDZWWV57L"; // Clave de escritura del canal ThingSpeak
+
+WiFiClient cliente; // Cliente para la conexión WiFi
+
+void setup() {
+  Wire.begin(); // Inicializa la comunicación I2C
+  Serial.begin(115200); // Inicializa la comunicación serial a 115200 baudios
+  pinMode(pinGPIO, OUTPUT); // Configura el pin como salida digital
+
+  WiFi.begin(ssid, password); // Conecta a la red WiFi
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.println("Connecting to WiFi..");
+  }
+
+  Serial.println("Connected to the WiFi network");
+  ThingSpeak.begin(cliente); // Inicializa la conexión con ThingSpeak
+  delay(5000); // Espera 5 segundos
+}
+
+void loop() {
+  medicion(); // Llama la función medición para solicitar informacion al dispositivo esclavo
+  ThingSpeak.writeFields(channelID, WriteAPIKey); // Envia los datos a ThingSpeak
+
+  Serial.println("Datos enviados a ThingSpeak!"); // Imprime un mensaje de envío exitoso
+
+  if (temperatura > 30) {
+    digitalWrite(pinGPIO, HIGH); // Establece el pin en estado HIGH (alto) si la temperatura es mayor a 30°C
+  } else {
+    digitalWrite(pinGPIO, LOW); // Establece el pin en estado LOW (bajo) si la temperatura es menor o igual a 30°C
+  }
+
+  delay(1000); // Espera 1 segundo antes de repetir el bucle
+}
+
+void medicion() {
+  Wire.requestFrom(8, sizeof(float)); // Solicita datos del dispositivo esclavo conectado al pin I2C
+  byte buffer[sizeof(float)]; // Crea un buffer para almacenar los datos
+
+  while (Wire.available()) {
+    Wire.readBytes(buffer, sizeof(float)); // Lee los datos en el buffer
+    memcpy(&temperatura, buffer, sizeof(float)); // Convierte el array de bytes de vuelta a float
+    Serial.println(temperatura); // Imprime la temperatura en la consola serial
+  }
+  
+  ThingSpeak.setField(1, temperatura); // Establece el valor del campo 1 en ThingSpeak con la temperatura medida
+}
