@@ -1,0 +1,33 @@
+#include <OneWire.h>              // Biblioteca para el protocolo OneWire
+#include <DallasTemperature.h>     // Biblioteca para el sensor de temperatura DS18B20
+#include <Wire.h>                 // Biblioteca para la comunicación I2C
+
+float temperatura;                  // Variable para almacenar la temperatura
+
+OneWire ourWire(2);                 // Se establece el pin 2 como bus OneWire
+DallasTemperature sensors(&ourWire); // Se declara un objeto para el sensor de temperatura
+
+void setup() {
+  delay(1000);
+  Wire.begin(8);                  // Dirección I2C del esclavo (puedes elegir cualquier valor entre 8 y 127)
+  Wire.onRequest(enviarDatos);    // Cuando el maestro solicita datos, se llama a la función enviarDatos
+  Serial.begin(9600);             // Inicia la comunicación serial a 9600 baudios
+  sensors.begin();                // Inicia el sensor de temperatura
+}
+
+void loop() {
+  sensors.requestTemperatures();   // Envía el comando para leer la temperatura
+  temperatura = sensors.getTempCByIndex(0); // Obtiene la temperatura en ºC desde el sensor
+
+  Serial.print("Temperatura = ");
+  Serial.print(temperatura);
+  Serial.println(" °C");
+  delay(100);                      // Espera 100 milisegundos antes de repetir el bucle
+}
+
+void enviarDatos() {
+  byte buffer[sizeof(float)];            // Crea un buffer del mismo tamaño que un float
+  memcpy(buffer, &temperatura, sizeof(float)); // Convierte el float a un array de bytes
+
+  Wire.write(buffer, sizeof(float));      // Envía el array de bytes al maestro a través del bus I2C
+}
